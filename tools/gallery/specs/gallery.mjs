@@ -36,6 +36,19 @@ async function capture(name) {
   await browser.saveScreenshot(`${staged}/${name}.png`);
 }
 
+async function assertNewTabPosition() {
+  const geometry = await browser.execute(() => {
+    const container = app.workspace.getMostRecentLeaf().tabHeaderEl.closest(".workspace-tab-header-container");
+    const tabs = container.querySelectorAll(".workspace-tab-header");
+    const tab = tabs[tabs.length - 1].getBoundingClientRect();
+    const button = container.querySelector(".workspace-tab-header-new-tab .clickable-icon").getBoundingClientRect();
+    return { gap: button.left - tab.right, offset: button.top - tab.top, height: button.height - tab.height };
+  });
+  assert.ok(Math.abs(geometry.gap - 6) < 1, `New-tab button must have a 6px gap: ${JSON.stringify(geometry)}`);
+  assert.ok(Math.abs(geometry.offset) < 1, "New-tab button must align with the tabs");
+  assert.ok(Math.abs(geometry.height) < 1, "New-tab button must match the tab height");
+}
+
 async function captureThumbnail() {
   await runFile("convert", [
     `${staged}/overview-light.png`,
@@ -73,6 +86,7 @@ describe("Claude.md real Obsidian gallery", () => {
   it("captures the deterministic gallery", async () => {
     await openNote("Showcase.md");
     await setPalette("light");
+    await assertNewTabPosition();
     await capture("overview-light");
 
     if (poc) return;
@@ -129,5 +143,31 @@ describe("Claude.md real Obsidian gallery", () => {
     await capture("status-bar-light");
 
     await captureThumbnail();
+  });
+
+  it("keeps the new-tab button aligned with multiple tabs and reduced motion", async () => {
+    await browser.execute(() => { app.workspace.getLeaf("tab"); });
+    await browser.pause(250);
+    await assertNewTabPosition();
+    await browser.sendCommand("Emulation.setEmulatedMedia", {
+      features: [{ name: "prefers-reduced-motion", value: "reduce" }]
+    });
+    assert.equal(await browser.execute(() => matchMedia("(prefers-reduced-motion: reduce)").matches), true);
+    await assertNewTabPosition();
+  });
+
+  it("keeps the new-tab button aligned with Windows title bar styles", async () => {
+    const originalClasses = await browser.execute(() => document.body.className);
+    try {
+      await browser.execute(() => {
+        document.body.classList.remove("is-linux");
+        document.body.classList.add("is-win");
+      });
+      await assertNewTabPosition();
+      await browser.execute(() => document.body.classList.add("is-hidden-frameless"));
+      await assertNewTabPosition();
+    } finally {
+      await browser.execute(classes => { document.body.className = classes; }, originalClasses);
+    }
   });
 });
