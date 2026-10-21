@@ -15,9 +15,24 @@ real Obsidian process under Xvfb. Do not commit visual changes with stale screen
 
 ## Versioning
 
-For each release, update `package.json` and `manifest.json` to the same
-Semantic Versioning value, then add the corresponding minimum Obsidian version
-to `versions.json`.
+Use the version script to update `package.json`, `manifest.json`, the lockfile,
+and the compatibility mapping in `versions.json` together:
+
+```sh
+node tools/version.mjs patch
+node tools/version.mjs minor
+node tools/version.mjs major
+node tools/version.mjs set 2.0.0 --compat 1.11.0
+```
+
+Versions must use numeric `X.Y.Z` format. Without `--compat`, the script keeps
+the current `manifest.json.minAppVersion`. With it, the script updates that
+minimum and writes `"<theme version>": "<compat version>"` in `versions.json`.
+Existing compatibility entries are preserved. The script works from any
+working directory and does not create commits or tags.
+
+Run `npm test` to check the script in temporary repositories. These tests also
+run as part of `npm run check` and the CI and release workflows.
 
 ## Release checklist
 
