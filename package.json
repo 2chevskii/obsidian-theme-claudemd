@@ -9,10 +9,11 @@
   },
   "scripts": {
     "build": "vite build",
-    "check": "npm run lint && npm run build",
+    "check": "npm run lint && npm test && npm run build",
     "gallery": "npm run build && node tools/gallery/run-gallery.mjs",
     "gallery:verify": "node tools/gallery/validate-gallery.mjs",
-    "lint": "stylelint src/"
+    "lint": "stylelint src/",
+    "test": "node --test tools/version.test.mjs"
   },
   "devDependencies": {
     "@fontsource-variable/geist": "5.3.0",
